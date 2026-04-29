@@ -3,6 +3,7 @@ from datetime import date
 import streamlit as st
 from pydantic import ValidationError
 
+from src.calculations import calculate
 from src.form_schema import GrantApplicationInput
 
 
@@ -140,7 +141,61 @@ def _handle_submission(**kwargs) -> None:
             st.error(f"**{field}**: {err['msg']}")
         return
 
-    st.success("Input validated. Application generation will appear here from Phase 3 onwards.")
+    calc = calculate(application)
+
+    # ── Warnings ──────────────────────────────────────────────────────────────
+    if calc.revenue_unknown:
+        st.warning(
+            "Annual revenue not provided — defaulting to **non-SME rate (25%)**. "
+            "If the company qualifies as an SME (<€35M revenue), the credit rate is 35%. "
+            "Please verify before submission."
+        )
+    if calc.capex_excluded:
+        st.warning(
+            f"Capital expenditure of €{application.capex_cost_eur:,.0f} was entered "
+            f"but claim year {application.claim_year} is before 2024 — capex is excluded from eligible costs."
+        )
+    if calc.is_capped:
+        st.warning(
+            f"Total eligible costs (€{calc.total_eligible_before_cap:,.0f}) exceed the annual cap "
+            f"of €{3_500_000:,.0f}. Credit calculated on the capped amount."
+        )
+
+    # ── Cost breakdown ────────────────────────────────────────────────────────
+    st.subheader("Indicative cost calculation")
+    sme_label = "SME (35%)" if calc.is_sme else "Non-SME (25%)"
+    if calc.revenue_unknown:
+        sme_label += " — unconfirmed"
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.metric("SME status", sme_label)
+        st.metric("Credit rate", f"{calc.credit_rate:.0%}")
+    with col_b:
+        st.metric("Total eligible costs", f"€{calc.total_eligible:,.0f}")
+        st.metric("Indicative tax credit", f"€{calc.indicative_credit:,.0f}")
+
+    with st.expander("Cost breakdown", expanded=True):
+        st.table(
+            {
+                "Cost category": [
+                    "Personnel (100% eligible)",
+                    "Contractors (60% eligible)",
+                    f"Capex {'(excluded — pre-2024)' if calc.capex_excluded else '(100% eligible from 2024)'}",
+                    "**Total eligible (before cap)**",
+                    "**Total eligible (after cap)**",
+                ],
+                "Amount (€)": [
+                    f"{calc.eligible_personnel:,.0f}",
+                    f"{calc.eligible_contractor:,.0f}",
+                    f"{calc.eligible_capex:,.0f}",
+                    f"{calc.total_eligible_before_cap:,.0f}",
+                    f"{calc.total_eligible:,.0f}",
+                ],
+            }
+        )
+
+    st.info("Full application draft will appear here from Phase 3 onwards.")
 
     with st.expander("Validated input (debug)", expanded=False):
         st.json(application.model_dump())

@@ -1,6 +1,6 @@
 # Build State
 
-**Last updated:** 2026-04-29
+**Last updated:** 2026-04-29 (Phase 2 complete)
 
 ## Done
 
@@ -11,15 +11,21 @@
 - `README.md` stub with sample input for the walkthrough demo
 - `ARCHITECTURE.md` — decisions 1–3 written (stack, hybrid generation, why Claude); stubs for decisions 4–7
 
+### Phase 2 — Calculations module
+- `src/calculations.py` — `CostCalculation` dataclass + `calculate()` function
+  - SME flag (strict `<` €35M threshold), 60% contractor rule, capex eligibility from 2024, €3.5M annual cap
+  - `indicative_credit` = `total_eligible × credit_rate` (never LLM)
+- `tests/test_calculations.py` — 17 unit tests covering all boundary cases; 17/17 pass
+- `pytest.ini` — sets rootdir and pythonpath for test discovery
+- `app.py` updated — Phase 2 results (cost breakdown table, credit metrics, warnings) now render on submit
+
 ## In Progress
 
-### Phase 2 — Calculations module
-- `src/calculations.py` — deterministic SME flag, eligible costs, tax credit math
-- `tests/test_calculations.py` — unit tests for boundary cases
+*(nothing — starting Phase 3)*
 
 ## Next up
 
-- Phase 3: First end-to-end LLM call (project summary via Anthropic API)
+- **Phase 3: First end-to-end LLM call** (project summary via Anthropic API)
 - Phase 4: Technical Uncertainty prompt v1 (monolithic) + v2 (decomposed), three test fixtures
 - Phase 5: Qualifying activities + consultant notes sections
 - Phase 6: Document assembly + .docx export
