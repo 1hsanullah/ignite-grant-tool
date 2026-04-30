@@ -5,6 +5,17 @@ from pydantic import ValidationError
 
 from src.calculations import calculate
 from src.form_schema import GrantApplicationInput
+from src.generator import generate_draft
+from src.llm_client import LLMCallError, LLMClient
+
+
+@st.cache_resource
+def _get_llm() -> tuple[LLMClient | None, str | None]:
+    """Initialise the Anthropic client once per process; return (client, error)."""
+    try:
+        return LLMClient(), None
+    except RuntimeError as exc:
+        return None, str(exc)
 
 
 def render_form() -> None:
@@ -195,7 +206,21 @@ def _handle_submission(**kwargs) -> None:
             }
         )
 
-    st.info("Full application draft will appear here from Phase 3 onwards.")
+    # ── Generated draft ───────────────────────────────────────────────────────
+    llm, llm_error = _get_llm()
+    if llm is None:
+        st.error(f"LLM not initialised — {llm_error}")
+        return
+
+    with st.spinner("Generating project summary (≈10s)…"):
+        try:
+            draft = generate_draft(application, calc, llm)
+        except LLMCallError as exc:
+            st.error(f"Generation failed — {exc}")
+            return
+
+    st.subheader("Project summary")
+    st.markdown(draft.project_summary)
 
     with st.expander("Validated input (debug)", expanded=False):
         st.json(application.model_dump())

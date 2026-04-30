@@ -1,6 +1,6 @@
 # Build State
 
-**Last updated:** 2026-04-29 (Phase 2 complete)
+**Last updated:** 2026-04-30 (Phase 3 complete)
 
 ## Done
 
@@ -19,13 +19,24 @@
 - `pytest.ini` — sets rootdir and pythonpath for test discovery
 - `app.py` updated — Phase 2 results (cost breakdown table, credit metrics, warnings) now render on submit
 
+### Phase 3 — First end-to-end LLM call
+- `src/llm_client.py` — `LLMClient` (Anthropic SDK wrapper), `LLMCallError`, shared system prompt with `cache_control: ephemeral`
+  - Model constants: `SONNET_MODEL = "claude-sonnet-4-6"` (default, ~$0.003/draft), `OPUS_MODEL = "claude-opus-4-7"` (documented tunable lever for Phase 4)
+  - System prompt (~700 tokens): BSFZ tone rules, FZlG programme context, evaluation criteria, borderline-project handling; annotated for caching (sub-threshold now — grows into Sonnet's 2048-token minimum in Phase 4–5)
+  - `complete(user_prompt, *, model, max_tokens)` — one `messages.create` call; raises `LLMCallError` on API failure, `RuntimeError` if key missing
+- `src/prompts/__init__.py` — package marker
+- `src/prompts/project_summary.py` — `build_prompt()` + `generate()`; max_tokens=600; title on line 1 + 2–3 BSFZ-grade paragraphs
+- `src/generator.py` — `GeneratedDraft` dataclass + `generate_draft(application, calc, llm)`; takes `calc` now so Phase 5 consultant-notes section doesn't require a signature change
+- `app.py` updated — `_get_llm()` singleton via `@st.cache_resource`; spinner + `generate_draft` call; `st.markdown(draft.project_summary)` on success; clean `st.error` on `LLMCallError`
+- `pytest` — 17/17 passing (no regressions)
+
 ## In Progress
 
-*(nothing — starting Phase 3)*
+*(nothing — starting Phase 4)*
 
 ## Next up
 
-- **Phase 3: First end-to-end LLM call** (project summary via Anthropic API)
+- **Phase 4: Technical Uncertainty prompt** v1 (monolithic) + v2 (decomposed), three test fixtures
 - Phase 4: Technical Uncertainty prompt v1 (monolithic) + v2 (decomposed), three test fixtures
 - Phase 5: Qualifying activities + consultant notes sections
 - Phase 6: Document assembly + .docx export
@@ -38,6 +49,7 @@
 - **Hybrid generation:** `calculations.py` for all math (never LLM), `src/prompts/` for all prose.
 - **Stretch goal:** FZlG eligibility checker (rule-based + LLM classification, pre-generation gate).
 - **Model:** Sonnet 4.6 default. Opus 4.7 as a documented tunable lever for the Technical Uncertainty prompt only.
+- **API gateway:** OpenRouter (`https://openrouter.ai/api/v1`) via the `openai` SDK. Same Claude models, OpenRouter handles billing. Model IDs prefixed `anthropic/` (e.g. `anthropic/claude-sonnet-4-6`).
 
 ## Deferred / production gaps
 

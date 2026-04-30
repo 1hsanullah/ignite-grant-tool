@@ -59,13 +59,27 @@ Technical uncertainty narrative, qualifying activities description, consultant n
 
 ---
 
-## 4. Why decompose the technical uncertainty prompt (v1 vs v2)
+## 4. Prompt caching strategy — system prompt as shared cache anchor
+
+**Chosen:** A single shared system prompt (~700 tokens, growing to ~1500+ in Phases 4–5) annotated with `cache_control: {"type": "ephemeral"}` on every call. Per-section user prompts are short and unique per submission.
+
+**Why this layout:**
+
+Anthropic's prompt cache is a prefix match: the cached prefix must be byte-identical on every request. Rendering order is `tools → system → messages`. Anything that changes per request (user company name, project description, figures) sits in the `messages` array — after the cache breakpoint. The system prompt never changes within a session and rarely changes across sessions (only on prompt iterations), so it is the natural anchor.
+
+**Sonnet 4.6 minimum cacheable prefix = 2048 tokens.** At Phase 3 launch the system prompt is ~700 tokens — below threshold. The cache_control annotation is harmless (silently ignored if below minimum) and means the cache will activate automatically as Phase 4–5 domain context brings the system prompt above threshold. No code change will be needed when that happens.
+
+**Why not per-section caching:** Each section call sends a different user prompt. The system prompt is the only repeated block, so it is the only sensible cache point. Attempting to cache user-prompt prefixes would require contrived shared preambles across sections with no benefit.
+
+---
+
+## 5. Why decompose the technical uncertainty prompt (v1 vs v2)
 
 *(To be written when Phase 4 is complete — will include side-by-side output comparison)*
 
 ---
 
-## 5. Why no database / no auth
+## 6. Why no database / no auth
 
 **No database:** This is a prototype. Each form submission is a stateless request-response cycle. A production system would need a job queue (LLM calls can take 10–15s), consultant accounts, and an audit trail of all generated drafts. These are explicitly out of scope. Noted as production gaps below.
 
@@ -73,7 +87,7 @@ Technical uncertainty narrative, qualifying activities description, consultant n
 
 ---
 
-## 6. Why this stretch goal (eligibility checker) and not the others
+## 7. Why this stretch goal (eligibility checker) and not the others
 
 **Chosen:** Pre-generation FZlG eligibility check — rule-based + LLM classification — displayed before the main draft.
 
@@ -86,7 +100,7 @@ Technical uncertainty narrative, qualifying activities description, consultant n
 
 ---
 
-## 7. Production gaps
+## 8. Production gaps
 
 Explicit list of what would need to be built before Ignite could use this in production:
 
