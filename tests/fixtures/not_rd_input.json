@@ -1,0 +1,12 @@
+{
+  "company_name": "MarktPlatz Digital GmbH",
+  "company_description": "Munich-based e-commerce agency building online retail platforms for German SME clients.",
+  "project_description": "We are building a multi-vendor e-commerce storefront for the German market. The platform will allow small retailers to list products, manage inventory, and process payments through a standard web interface. We are using Next.js for the frontend and PostgreSQL for the data layer, integrating Stripe for payments and Sendgrid for transactional emails. The main challenge is adapting the user interface to German language and legal requirements including GDPR consent flows and statutory cancellation rights. We expect to complete the build within four months using an established agile delivery process.",
+  "team_size": 6,
+  "rd_time_pct": 40,
+  "annual_revenue_eur": 2200000,
+  "personnel_cost_eur": 240000,
+  "contractor_cost_eur": 40000,
+  "capex_cost_eur": 0,
+  "claim_year": 2025
+}

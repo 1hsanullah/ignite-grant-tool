@@ -1,0 +1,12 @@
+{
+  "company_name": "StreamBridge GmbH",
+  "company_description": "Frankfurt-based data engineering consultancy building real-time analytics infrastructure for financial services clients.",
+  "project_description": "We are developing a high-throughput event-processing pipeline that combines Apache Kafka, Apache Flink, and a custom change-data-capture (CDC) layer to achieve end-to-end latency targets below 50 milliseconds under peak load conditions of 2 million events per second. While Kafka and Flink are mature technologies, our CDC layer must synchronise schema changes across heterogeneous source databases without introducing processing pauses, a problem for which no existing open-source solution meets our latency and consistency requirements simultaneously. It is uncertain whether our proposed lock-free schema-versioning mechanism will maintain linearisable consistency guarantees under concurrent DDL events without degrading throughput. We will prototype two alternative consistency models and measure their behaviour under synthetic load profiles derived from real client data.",
+  "team_size": 5,
+  "rd_time_pct": 60,
+  "annual_revenue_eur": 4800000,
+  "personnel_cost_eur": 280000,
+  "contractor_cost_eur": 80000,
+  "capex_cost_eur": 0,
+  "claim_year": 2025
+}

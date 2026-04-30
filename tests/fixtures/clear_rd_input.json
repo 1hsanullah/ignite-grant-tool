@@ -1,0 +1,12 @@
+{
+  "company_name": "Luminary ML GmbH",
+  "company_description": "Berlin-based deep learning research company developing training infrastructure for large language models.",
+  "project_description": "We are researching a novel second-order optimisation algorithm for training sparse-attention transformer models at scale. Existing first-order optimisers (Adam, AdaFactor) suffer from activation divergence when gradient sparsity exceeds approximately 85%, leading to training instability that cannot be reliably mitigated through learning-rate scheduling alone. Our hypothesis is that a curvature-aware update rule — derived from a computationally tractable approximation of the Hessian diagonal — can suppress this divergence by modulating step sizes based on local loss landscape geometry. It is unknown at the project's outset whether the Hessian approximation will remain numerically stable under sparse-gradient conditions, whether the additional compute overhead per step will be offset by faster convergence, and whether the approach will generalise across model architectures beyond the initial test configuration. The team will conduct a systematic series of controlled training runs, varying sparsity levels, batch sizes, and approximation granularity, with ablations designed to isolate the contribution of each component of the update rule.",
+  "team_size": 4,
+  "rd_time_pct": 90,
+  "annual_revenue_eur": 1200000,
+  "personnel_cost_eur": 320000,
+  "contractor_cost_eur": 60000,
+  "capex_cost_eur": 0,
+  "claim_year": 2025
+}

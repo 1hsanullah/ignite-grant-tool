@@ -1,6 +1,6 @@
 # Build State
 
-**Last updated:** 2026-04-30 (Phase 3 complete)
+**Last updated:** 2026-04-30 (Phase 4 complete)
 
 ## Done
 
@@ -30,14 +30,23 @@
 - `app.py` updated — `_get_llm()` singleton via `@st.cache_resource`; spinner + `generate_draft` call; `st.markdown(draft.project_summary)` on success; clean `st.error` on `LLMCallError`
 - `pytest` — 17/17 passing (no regressions)
 
+### Phase 4 — Technical Uncertainty prompt
+- `src/prompts/technical_uncertainty/` subpackage:
+  - `v1_monolithic.py` — single-call version; `build_prompt()` + `generate()`
+  - `v2_decomposed.py` — 3-stage version: failure mode → unknowns → synthesis; `V2Result` dataclass + stage builders + `generate()`
+  - `__init__.py` — dispatch `generate(application, llm, *, version="v2") -> str`
+- `tests/fixtures/` — `clear_rd_input.json`, `borderline_rd_input.json`, `not_rd_input.json`
+- `tests/test_technical_uncertainty.py` — 11 new tests (prompt-builder strings + fixture loading); 28/28 pass
+- `scripts/compare_uncertainty_prompts.py` — offline eval: runs all 3 fixtures × both versions; writes 6 markdown files to `examples/sample_outputs/`; prints summary table
+- `src/generator.py` — added `technical_uncertainty: str` field to `GeneratedDraft`; added `uncertainty_version` kwarg to `generate_draft()`
+- `app.py` — renders "Statement of technical uncertainty" section; "🔬 Compare v1 vs v2" checkbox inside form triggers side-by-side `st.tabs` view showing both versions
+
 ## In Progress
 
-*(nothing — starting Phase 4)*
+*(nothing — starting Phase 5)*
 
 ## Next up
 
-- **Phase 4: Technical Uncertainty prompt** v1 (monolithic) + v2 (decomposed), three test fixtures
-- Phase 4: Technical Uncertainty prompt v1 (monolithic) + v2 (decomposed), three test fixtures
 - Phase 5: Qualifying activities + consultant notes sections
 - Phase 6: Document assembly + .docx export
 - Phase 7: FZlG eligibility checker (stretch)

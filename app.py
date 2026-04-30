@@ -7,6 +7,7 @@ from src.calculations import calculate
 from src.form_schema import GrantApplicationInput
 from src.generator import generate_draft
 from src.llm_client import LLMCallError, LLMClient
+from src.prompts.technical_uncertainty import v1_monolithic, v2_decomposed
 
 
 @st.cache_resource
@@ -116,6 +117,16 @@ def render_form() -> None:
             help="FZlG allows retroactive claims up to 4 years back.",
         )
 
+        st.divider()
+        compare_prompts = st.checkbox(
+            "🔬 Compare v1 vs v2 technical uncertainty prompts (runs both, ~2× slower)",
+            value=False,
+            help=(
+                "Shows the monolithic (v1) and decomposed (v2) prompt outputs side by side. "
+                "v2 chains three sub-prompts for a more concrete failure-mode analysis."
+            ),
+        )
+
         submitted = st.form_submit_button(
             "Generate Application Draft",
             type="primary",
@@ -134,6 +145,7 @@ def render_form() -> None:
             contractor_cost_eur=contractor_cost_eur,
             capex_cost_eur=capex_cost_eur,
             claim_year=int(claim_year),
+            compare_prompts=compare_prompts,
         )
 
     st.divider()
@@ -143,7 +155,7 @@ def render_form() -> None:
     )
 
 
-def _handle_submission(**kwargs) -> None:
+def _handle_submission(*, compare_prompts: bool = False, **kwargs) -> None:
     try:
         application = GrantApplicationInput(**kwargs)
     except ValidationError as exc:
@@ -212,7 +224,12 @@ def _handle_submission(**kwargs) -> None:
         st.error(f"LLM not initialised — {llm_error}")
         return
 
-    with st.spinner("Generating project summary (≈10s)…"):
+    spinner_msg = (
+        "Generating draft (project summary + v1 & v2 technical uncertainty, ≈30s)…"
+        if compare_prompts
+        else "Generating draft (project summary + technical uncertainty, ≈20s)…"
+    )
+    with st.spinner(spinner_msg):
         try:
             draft = generate_draft(application, calc, llm)
         except LLMCallError as exc:
@@ -221,6 +238,31 @@ def _handle_submission(**kwargs) -> None:
 
     st.subheader("Project summary")
     st.markdown(draft.project_summary)
+
+    st.subheader("Statement of technical uncertainty")
+    if not compare_prompts:
+        st.markdown(draft.technical_uncertainty)
+    else:
+        # Run v1 so we can show side-by-side. v2 is already in draft.technical_uncertainty.
+        with st.spinner("Running v1 (monolithic) prompt for comparison…"):
+            try:
+                v1_text = v1_monolithic.generate(application, llm)
+            except LLMCallError as exc:
+                v1_text = f"⚠ v1 generation failed — {exc}"
+
+        tab_v2, tab_v1 = st.tabs(["v2 — decomposed (default)", "v1 — monolithic"])
+        with tab_v2:
+            st.caption(
+                "Three chained sub-prompts: failure mode → unknowns at outset → synthesis. "
+                "Each stage conditions the next."
+            )
+            st.markdown(draft.technical_uncertainty)
+        with tab_v1:
+            st.caption(
+                "Single prompt covering all three elements at once. "
+                "Compare to v2 for concreteness of failure-mode analysis."
+            )
+            st.markdown(v1_text)
 
     with st.expander("Validated input (debug)", expanded=False):
         st.json(application.model_dump())
