@@ -1,6 +1,6 @@
 # Build State
 
-**Last updated:** 2026-04-30 (Phase 4 complete)
+**Last updated:** 2026-04-30 (Phase 5 complete)
 
 ## Done
 
@@ -41,13 +41,19 @@
 - `src/generator.py` — added `technical_uncertainty: str` field to `GeneratedDraft`; added `uncertainty_version` kwarg to `generate_draft()`
 - `app.py` — renders "Statement of technical uncertainty" section; "🔬 Compare v1 vs v2" checkbox inside form triggers side-by-side `st.tabs` view showing both versions
 
+### Phase 5 — Qualifying activities + consultant notes
+- `src/prompts/qualifying_activities.py` — numbered-list prompt mapping project description to FZlG activity categories (Experimental development / Applied research / Fundamental research); takes `calc` for cost context
+- `src/prompts/consultant_notes.py` — two-layer hybrid: `deterministic_notes()` fires factual flags from `calc` (revenue unknown, capex excluded, cap hit, contractors present); `build_prompt()` chains the three generated sections back to the LLM for self-critique ([Verify] / [Weakness] / [Strengthen] bullets)
+- `src/generator.py` — `GeneratedDraft` expanded with `qualifying_activities` + `consultant_notes`; `generate_draft()` now orchestrates 6 LLM calls total
+- `app.py` — renders two new sections; spinner copy updated; deterministic-first ordering noted in caption
+- `tests/test_qualifying_activities.py` + `tests/test_consultant_notes.py` — 22 new unit tests; 50/50 passing
+
 ## In Progress
 
-*(nothing — starting Phase 5)*
+*(nothing — starting Phase 6)*
 
 ## Next up
 
-- Phase 5: Qualifying activities + consultant notes sections
 - Phase 6: Document assembly + .docx export
 - Phase 7: FZlG eligibility checker (stretch)
 - Phase 8: README polish, ARCHITECTURE.md completion, sample outputs

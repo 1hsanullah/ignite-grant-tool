@@ -7,14 +7,16 @@ from src.form_schema import GrantApplicationInput
 from src.llm_client import LLMClient
 from src.prompts import project_summary
 from src.prompts import technical_uncertainty
+from src.prompts import qualifying_activities
+from src.prompts import consultant_notes
 
 
 @dataclass
 class GeneratedDraft:
     project_summary: str
     technical_uncertainty: str
-    # Phase 5: qualifying_activities: str
-    # Phase 5: consultant_notes: str
+    qualifying_activities: str
+    consultant_notes: str
 
 
 def generate_draft(
@@ -25,9 +27,17 @@ def generate_draft(
     uncertainty_version: str = "v2",
 ) -> GeneratedDraft:
     """Orchestrate LLM-generated sections. Deterministic math lives in calc."""
+    summary = project_summary.generate(application, llm)
+    uncertainty = technical_uncertainty.generate(
+        application, llm, version=uncertainty_version
+    )
+    activities = qualifying_activities.generate(application, calc, llm)
+    notes = consultant_notes.generate(
+        application, calc, summary, uncertainty, activities, llm
+    )
     return GeneratedDraft(
-        project_summary=project_summary.generate(application, llm),
-        technical_uncertainty=technical_uncertainty.generate(
-            application, llm, version=uncertainty_version
-        ),
+        project_summary=summary,
+        technical_uncertainty=uncertainty,
+        qualifying_activities=activities,
+        consultant_notes=notes,
     )

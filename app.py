@@ -225,9 +225,9 @@ def _handle_submission(*, compare_prompts: bool = False, **kwargs) -> None:
         return
 
     spinner_msg = (
-        "Generating draft (project summary + v1 & v2 technical uncertainty, ≈30s)…"
+        "Generating draft (all sections + v1 & v2 uncertainty comparison, ≈45s)…"
         if compare_prompts
-        else "Generating draft (project summary + technical uncertainty, ≈20s)…"
+        else "Generating draft (all sections, ≈30s)…"
     )
     with st.spinner(spinner_msg):
         try:
@@ -263,6 +263,16 @@ def _handle_submission(*, compare_prompts: bool = False, **kwargs) -> None:
                 "Compare to v2 for concreteness of failure-mode analysis."
             )
             st.markdown(v1_text)
+
+    st.subheader("Qualifying R&D activities")
+    st.markdown(draft.qualifying_activities)
+
+    st.subheader("Notes for the consultant")
+    st.caption(
+        "Deterministic flags (from cost inputs) appear first, followed by LLM-identified "
+        "weaknesses and items to verify. Review all before submission."
+    )
+    st.markdown(draft.consultant_notes)
 
     with st.expander("Validated input (debug)", expanded=False):
         st.json(application.model_dump())
