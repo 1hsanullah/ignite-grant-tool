@@ -29,6 +29,13 @@ class GrantApplicationInput(BaseModel):
         description="Eligible only for claim years from 2024 onwards",
     )
     claim_year: int
+    is_germany_registered: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Whether the company has a German taxable presence (Betriebsstätte). "
+            "None ⇒ unconfirmed → surfaces as Needs Review in eligibility."
+        ),
+    )
 
     @field_validator("claim_year")
     @classmethod

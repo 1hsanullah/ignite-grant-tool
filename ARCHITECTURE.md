@@ -122,9 +122,45 @@ The additional cost is ~3× in API calls and ~8 additional seconds of latency. F
 
 **Why eligibility checker:** It extends the hybrid-generation thesis directly — rules for the objective checks (4-year window, €3.5M cap, German company requirement), LLM classification for the subjective question ("is this genuine R&D or normal product development?"). It also adds real product value: a consultant knows within 30 seconds whether a new enquiry is worth pursuing.
 
+**What was built** (`src/eligibility.py`, `src/prompts/rd_classifier.py`):
+
+Four checks run before the main draft generation:
+
+| # | Check | Method | Verdict contribution |
+|---|---|---|---|
+| 1 | German taxable presence | Rule (`is_germany_registered: Optional[bool]`) | `None` → warn; `False` → fail |
+| 2 | Cost figures within €3.5M cap | Rule (reuses `calc.is_capped`) | capped → warn (doesn't disqualify; trims the credit) |
+| 3 | Claim year within 4-year window | Rule (enforced at schema layer in `form_schema.py:33-42`) | always passes by construction |
+| 4 | R&D vs product-engineering | LLM (1–5 score via Haiku 4.5) | ≤2 → fail; 3 → warn; ≥4 → pass |
+
+**Aggregation:** any fail → Likely Ineligible; any warn (no fail) → Needs Review; all pass → Eligible.
+
+**Why Haiku 4.5 for the classifier:** the R&D scoring call is a low-stakes sentiment check — the compliance weight is carried by the deterministic rules. Haiku is an order of magnitude cheaper than Sonnet and completes in ~1s. Defined as `HAIKU_MODEL = "anthropic/claude-haiku-4-5"` in `llm_client.py:15`, parallel to the existing `SONNET_MODEL` / `OPUS_MODEL` constants.
+
+**Graceful degradation:** if the classifier fails (`LLMCallError`), `rd_classifier.generate()` catches the error and returns `(3, "Classifier unavailable — defaulted to Needs Review.")` (`prompts/rd_classifier.py:46-52`). The verdict drops to Needs Review rather than crashing the page; rule-based checks are unaffected.
+
 ---
 
-## 8. Production gaps
+## 8. Document export design
+
+**Chosen:** `python-docx` with a hand-rolled 40-line markdown renderer.
+
+The LLM outputs are markdown, not plain text. Two approaches to get them into Word:
+
+| Approach | Pros | Cons |
+|---|---|---|
+| `markdown` lib → `htmldocx` (or `mammoth`) | Full markdown coverage | Two extra dependencies; conversion fidelity for edge cases unpredictable |
+| Hand-rolled line parser in `document_export.py` | Zero extra deps; deterministic; exactly matches what prompts emit | Must be updated if prompts start generating tables or code fences |
+
+**Why the hand-rolled parser:** the prompts produce a known narrow grammar: blank-line-separated paragraphs, `- `/`* ` bullets, `\d+\. ` numbered items, and occasional `**bold**`. Prompts explicitly forbid headings, tables, and code blocks. Adding a markdown→html→docx pipeline introduces failure modes on grammar the prompts will never produce. Keeping the converter to ~40 LOC in `_render_markdown()` keeps the failure surface local and testable.
+
+**Conditional eligibility section:** `build_docx(..., eligibility=None)` renders the eligibility section only when an `EligibilityResult` is passed. Default `None` keeps the function callable from unit tests that don't exercise the full LLM path.
+
+**Section ordering mirrors the on-screen UI 1:1** — same sequence the consultant sees on screen is the sequence in the document. This makes the walkthrough demo coherent: every on-screen section has a corresponding page in the downloaded Word file.
+
+---
+
+## 9. Production gaps
 
 Explicit list of what would need to be built before Ignite could use this in production:
 

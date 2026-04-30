@@ -4,6 +4,8 @@ import streamlit as st
 from pydantic import ValidationError
 
 from src.calculations import calculate
+from src.document_export import build_docx
+from src.eligibility import EligibilityResult, Verdict, evaluate
 from src.form_schema import GrantApplicationInput
 from src.generator import generate_draft
 from src.llm_client import LLMCallError, LLMClient
@@ -108,6 +110,18 @@ def render_form() -> None:
 
         st.divider()
 
+        # ── Eligibility ──────────────────────────────────────────────────────
+        st.subheader("Eligibility")
+        germany_status = st.radio(
+            "Is the company registered (taxable) in Germany? *",
+            options=["Yes", "No", "Not sure"],
+            index=0,
+            horizontal=True,
+            help="FZlG requires a German taxable presence (Betriebsstätte). Answering 'Not sure' flags this for consultant review.",
+        )
+
+        st.divider()
+
         # ── Claim year ───────────────────────────────────────────────────────
         st.subheader("Claim year")
         current_year = date.today().year
@@ -134,6 +148,7 @@ def render_form() -> None:
         )
 
     if submitted:
+        germany_map = {"Yes": True, "No": False, "Not sure": None}
         _handle_submission(
             company_name=company_name,
             company_description=company_description,
@@ -145,6 +160,7 @@ def render_form() -> None:
             contractor_cost_eur=contractor_cost_eur,
             capex_cost_eur=capex_cost_eur,
             claim_year=int(claim_year),
+            is_germany_registered=germany_map[germany_status],
             compare_prompts=compare_prompts,
         )
 
@@ -165,6 +181,35 @@ def _handle_submission(*, compare_prompts: bool = False, **kwargs) -> None:
         return
 
     calc = calculate(application)
+
+    # ── Eligibility check ─────────────────────────────────────────────────────
+    llm, llm_error = _get_llm()
+    if llm is None:
+        st.error(f"LLM not initialised — {llm_error}")
+        return
+
+    with st.spinner("Checking eligibility…"):
+        eligibility = evaluate(application, calc, llm)
+
+    _STATUS_ICON = {"pass": "✓", "warn": "⚠", "fail": "✗"}
+    verdict_msg = f"**FZlG Eligibility: {eligibility.verdict.value}**"
+    if eligibility.verdict == Verdict.ELIGIBLE:
+        st.success(verdict_msg)
+    elif eligibility.verdict == Verdict.NEEDS_REVIEW:
+        st.warning(verdict_msg)
+    else:
+        st.error(verdict_msg)
+
+    with st.expander(
+        "Eligibility detail",
+        expanded=(eligibility.verdict != Verdict.ELIGIBLE),
+    ):
+        for check in eligibility.checks:
+            icon = _STATUS_ICON[check.status]
+            st.markdown(f"**{icon} {check.name}**  \n{check.reasoning}")
+        st.markdown(
+            f"**R&D classifier score:** {eligibility.rd_score}/5  \n{eligibility.rd_reasoning}"
+        )
 
     # ── Warnings ──────────────────────────────────────────────────────────────
     if calc.revenue_unknown:
@@ -219,11 +264,6 @@ def _handle_submission(*, compare_prompts: bool = False, **kwargs) -> None:
         )
 
     # ── Generated draft ───────────────────────────────────────────────────────
-    llm, llm_error = _get_llm()
-    if llm is None:
-        st.error(f"LLM not initialised — {llm_error}")
-        return
-
     spinner_msg = (
         "Generating draft (all sections + v1 & v2 uncertainty comparison, ≈45s)…"
         if compare_prompts
@@ -273,6 +313,16 @@ def _handle_submission(*, compare_prompts: bool = False, **kwargs) -> None:
         "weaknesses and items to verify. Review all before submission."
     )
     st.markdown(draft.consultant_notes)
+
+    st.divider()
+    st.download_button(
+        label="Download as .docx",
+        data=build_docx(application, calc, draft, eligibility),
+        file_name=(
+            f"FZlG_application_{application.company_name.replace(' ', '_')}_{application.claim_year}.docx"
+        ),
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
     with st.expander("Validated input (debug)", expanded=False):
         st.json(application.model_dump())

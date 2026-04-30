@@ -12,6 +12,7 @@ load_dotenv()
 # prompt (Phase 4) if Sonnet output quality is insufficient on that section.
 SONNET_MODEL = "anthropic/claude-sonnet-4-6"
 OPUS_MODEL = "anthropic/claude-opus-4-7"
+HAIKU_MODEL = "anthropic/claude-haiku-4-5"  # fast, cheap — used for the eligibility classifier
 
 # Shared system prompt — BSFZ tone enforcement + FZlG domain context.
 _SYSTEM_PROMPT = """\

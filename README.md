@@ -1,8 +1,6 @@
 # Ignite R&D Grant Application Tool
 
-A drafting assistant for **FZlG** (Forschungszulagengesetz) R&D tax credit applications. A consultant fills in a five-field form describing the company and its R&D project; the tool generates a structured BSFZ-ready draft with deterministic cost calculations and LLM-authored prose — in under 30 seconds.
-
-> **Status:** Under construction — see `TASK.md` for current phase.
+A drafting assistant for **FZlG** (Forschungszulagengesetz) R&D tax credit applications. A consultant fills in a form describing the company and its R&D project; the tool runs an eligibility pre-check, generates a structured BSFZ-ready draft with deterministic cost calculations and LLM-authored prose, and delivers a downloadable `.docx` — in under 45 seconds.
 
 ---
 
@@ -13,10 +11,10 @@ git clone <repo-url>
 cd ignite-grant-tool
 pip install -r requirements.txt
 cp .env.example .env
-# Paste your Anthropic API key into .env
+# Add your OpenRouter API key to .env
 ```
 
-Get an Anthropic API key at [console.anthropic.com](https://console.anthropic.com).
+Get an OpenRouter API key at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys). OpenRouter routes requests to Anthropic Sonnet 4.6 (for the main draft) and Haiku 4.5 (for the eligibility classifier).
 
 ## Run
 
@@ -24,34 +22,67 @@ Get an Anthropic API key at [console.anthropic.com](https://console.anthropic.co
 streamlit run app.py
 ```
 
-Open [http://localhost:8501](http://localhost:8501) in your browser.
+Open [http://localhost:8501](http://localhost:8501).
+
+## Tests
+
+The deterministic logic (FZlG calculations, eligibility rules, prompt builders, document assembly) is fully unit-tested — no API key required:
+
+```bash
+pytest
+```
+
+81 tests, all passing. Run these before the LLM-dependent path to verify the math is correct.
 
 ## Try it
 
 Paste this into the form to see a complete generated draft:
 
 ```
-Company: Tensorwave GmbH
-What they do: Deep learning infrastructure for autonomous vehicle perception
-Project: Novel sparse attention mechanism for real-time LiDAR point-cloud processing
-         that reduces compute by 40% without sacrificing detection accuracy at long range.
-         The team does not know at the outset whether sparsity can be maintained below
-         100ms latency under adversarial weather conditions — this is the core uncertainty.
-Team: 8 engineers, 80% R&D time
-Revenue: €4.2M (SME)
-Costs: Personnel €480,000 / Contractors €60,000 / Capex €30,000
-Claim year: 2025
+Company name:          Tensorwave GmbH
+What they do:          Deep learning infrastructure for autonomous vehicle perception
+R&D project:           Novel sparse attention mechanism for real-time LiDAR point-cloud
+                       processing. Existing dense-attention approaches cannot maintain
+                       sub-100ms inference latency under adversarial weather conditions.
+                       The team does not know at the outset whether sparsity above 85%
+                       can preserve detection accuracy at long range — this is the core
+                       technical uncertainty. Work is structured as systematic ablation
+                       studies varying sparsity thresholds, batch geometry, and weather
+                       simulation parameters.
+Team size:             8 engineers, 80% R&D time
+Annual revenue:        €4,200,000 (SME — qualifies for the 35% credit rate)
+Personnel costs:       €480,000
+Contractor costs:      €60,000
+Equipment / capex:     €30,000
+Claim year:            2025
+Germany registered:    Yes
 ```
+
+Expected output: **Eligible** (green) verdict at the top → cost table (total eligible ~€522,000, indicative credit ~€182,700) → four LLM-generated prose sections → "Download as .docx" button.
+
+## What gets generated
+
+| Section | Source |
+|---|---|
+| FZlG eligibility verdict (Eligible / Needs Review / Likely Ineligible) | Rule-based + LLM classifier |
+| Indicative cost calculation (SME status, credit rate, eligible totals) | Deterministic — never LLM |
+| Project title and summary | LLM |
+| Statement of technical uncertainty | LLM (v2 decomposed — 3 chained sub-prompts) |
+| Qualifying R&D activities (numbered, classified by Frascati category) | LLM |
+| Notes for the consultant ([Verify] / [Weakness] / [Strengthen] bullets) | Deterministic flags + LLM |
+| .docx download | python-docx — mirrors on-screen content |
 
 ## Where to look in the code
 
 | File | What it does |
 |---|---|
-| `src/form_schema.py` | Pydantic input model — the contract between UI and generation |
 | `src/calculations.py` | Deterministic FZlG math — SME flag, eligible costs, credit amount |
-| `src/prompts/technical_uncertainty.py` | The highest-effort prompt — what BSFZ actually evaluates |
-| `src/generator.py` | Orchestrates LLM calls and assembles the final document |
+| `src/form_schema.py` | Pydantic input model — the contract between UI and generation |
+| `src/eligibility.py` | Eligibility checker — 3 rule-based checks + LLM R&D classifier |
+| `src/prompts/technical_uncertainty/v2_decomposed.py` | The highest-effort prompt — what BSFZ actually evaluates |
+| `src/generator.py` | Orchestrates all LLM calls and assembles the draft |
+| `src/document_export.py` | Assembles the .docx from deterministic data + generated prose |
 
 ## Architecture
 
-See `ARCHITECTURE.md` for the reasoning behind every major design decision.
+See `ARCHITECTURE.md` for the reasoning behind every major design decision, including why the math is never delegated to an LLM and how the eligibility checker extends the same hybrid pattern.
