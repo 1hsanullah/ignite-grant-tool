@@ -75,7 +75,31 @@ Anthropic's prompt cache is a prefix match: the cached prefix must be byte-ident
 
 ## 5. Why decompose the technical uncertainty prompt (v1 vs v2)
 
-*(To be written when Phase 4 is complete — will include side-by-side output comparison)*
+**The thesis:** When a single prompt is asked to cover a failure mode, unknowns at outset, and systematic approach in one pass, the model prioritises fluency over precision. Forcing it to reason about each ingredient in a separate call — before synthesising — produces more mechanistically specific output, particularly on the failure mode, which is the element the BSFZ evaluator is most likely to scrutinise.
+
+**Concrete comparison — borderline fixture (StreamBridge CDC pipeline):**
+
+v1 (monolithic) describes the failure mode as:
+> "Existing open-source CDC implementations — including Debezium and Maxwell's Daemon — serialise schema evolution events through a centralised schema registry, **introducing processing pauses** when concurrent DDL events arrive during peak ingestion."
+
+v2 (decomposed) Stage 1, reasoning about the failure mode in isolation before the synthesis, produces:
+> "Under concurrent DDL events, these frameworks introduce processing pauses **by briefly halting consumer threads** to resolve schema version conflicts before resuming event delivery. This pause-on-schema-change behaviour is acceptable at modest throughput but becomes a consistency and latency liability **at two million events per second**."
+
+The v2 version names the mechanism — thread halting — rather than just the symptom (pauses), and it specifies the precise conditions under which the failure mode becomes material. By the time Stage 3 writes the synthesis, it has this mechanistic understanding as context and carries it through into the final statement. A BSFZ evaluator reading v2 understands *why* existing approaches fail, not just *that* they fail.
+
+**The trade-off:**
+
+| | v1 monolithic | v2 decomposed |
+|---|---|---|
+| LLM calls | 1 | 3 |
+| Latency (borderline fixture) | ~13s | ~21s |
+| Input tokens | ~500 | ~1,500 |
+| Failure-mode precision | Good | Better |
+| Unknowns framing | Good | More concrete |
+
+The additional cost is ~3× in API calls and ~8 additional seconds of latency. For a section that determines whether the BSFZ certifies the project as R&D at all, this trade-off is correct. The one place in the whole application where extra LLM reasoning is worth paying for is here.
+
+**Why this comparison is useful in the walkthrough:** v1 is not bad — it named the right technologies and got the structure right. v2 is meaningfully better on the dimension that matters. The ability to show a concrete before/after — same input, demonstrably more precise output — is a cleaner argument for prompt decomposition than any abstract principle.
 
 ---
 
