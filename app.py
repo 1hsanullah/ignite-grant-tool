@@ -26,6 +26,10 @@ def render_form() -> None:
         page_title="Ignite | FZlG Grant Application",
         layout="centered",
     )
+    st.markdown(
+        "<style>div[data-testid=\"InputInstructions\"] { display: none; }</style>",
+        unsafe_allow_html=True,
+    )
     st.title("Ignite R&D Grant Application")
     st.caption(
         "Generate a first-draft FZlG (Forschungszulagengesetz) application for BSFZ review. "
@@ -71,17 +75,14 @@ def render_form() -> None:
         # ── Financials ───────────────────────────────────────────────────────
         st.subheader("Financials")
 
-        knows_revenue = st.checkbox(
-            "I know the company's annual revenue (used to determine SME status)"
+        annual_revenue_raw = st.number_input(
+            "Annual revenue (€) — leave at 0 if unknown",
+            min_value=0.0,
+            step=500_000.0,
+            value=0.0,
+            help="SME threshold: <€35M qualifies for the 35% credit rate instead of 25%. Leave at 0 to default to the non-SME rate (25%).",
         )
-        annual_revenue_eur = None
-        if knows_revenue:
-            annual_revenue_eur = st.number_input(
-                "Annual revenue (€)",
-                min_value=0.0,
-                step=500_000.0,
-                help="SME threshold: <€35M qualifies for the 35% credit rate instead of 25%.",
-            )
+        annual_revenue_eur = annual_revenue_raw if annual_revenue_raw > 0 else None
 
         col3, col4, col5 = st.columns(3)
         with col3:

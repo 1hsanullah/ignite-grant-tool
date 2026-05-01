@@ -13,3 +13,5 @@ dist/
 build/
 .streamlit/secrets.toml
 *.docx
+.claude/
+walkthrough_script.md
