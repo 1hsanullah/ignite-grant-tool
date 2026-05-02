@@ -4,25 +4,21 @@ A drafting assistant for **FZlG** (Forschungszulagengesetz) R&D tax credit appli
 
 ---
 
-## Setup
+## Live demo
+
+**[https://ignite-grant-tool-nmska4bk2vyqfgrzgjxt66.streamlit.app](https://ignite-grant-tool-nmska4bk2vyqfgrzgjxt66.streamlit.app)**
+
+No setup required — open the link and use it directly.
+
+## Local setup (optional)
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/1hsanullah/ignite-grant-tool
 cd ignite-grant-tool
 pip install -r requirements.txt
-cp .env.example .env
-# Add your OpenRouter API key to .env
-```
-
-Get an OpenRouter API key at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys). OpenRouter routes requests to Anthropic Sonnet 4.6 (for the main draft) and Haiku 4.5 (for the eligibility classifier).
-
-## Run
-
-```bash
+cp .env.example .env          # add your OpenRouter API key
 streamlit run app.py
 ```
-
-Open [http://localhost:8501](http://localhost:8501).
 
 ## Tests
 
